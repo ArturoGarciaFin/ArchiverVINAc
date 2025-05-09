@@ -10,24 +10,24 @@ void load_directory(FILE *archive, member **header, int *size)
 {
     if (!archive)
     {
-        fprintf(stderr, "Arquivo nao aberto\n");
+        fprintf(stderr, "Failed to open archiver in load_directory\n");
         *header = NULL;
         *size = 0;
         return;
     }
 
-    //vai fim do arquivo e le a quantidade de membros
+    //goes to end of archiver and reads size number
     fseek(archive, -sizeof(int), SEEK_END);
     fread(size, sizeof(int), 1, archive);
     
-    //retorna se o tamanho for 0
     if (*size == 0)
     {
+        printf("Archiver empty\n");
         *header = NULL;
         return;
     }
 
-    //coloca o ponteiro no diretorio
+    //points to start of directory
     fseek(archive, -(sizeof(int) + (*size)*sizeof(member)), SEEK_END);
 
     *header = malloc((*size)*sizeof(member));
@@ -38,10 +38,10 @@ void load_directory(FILE *archive, member **header, int *size)
         return;
     }
 
-    //le os membros do diretorio
+    //reads directory members
     fread(*header, sizeof(member), *size, archive);
 
-    //printf("Diretorio carregado, %d membros\n", *size);
+    //printf("Directory loaded, %d members\n", *size);
 
     return;
 }
@@ -50,23 +50,23 @@ void save_directory(FILE *archive, member **header, int size)
 {
     if (!archive)
     {
-        fprintf(stderr, "Arquivo nao aberto\n");
+        fprintf(stderr, "Failed to open archiver in save_directory\n");
         return;
     }
 
     if (size == 0 || *header == NULL)
     {
-        fprintf(stderr, "Diretorio vazio\n");
+        fprintf(stderr, "Directory empty\n");
         return;
     }
 
     fseek(archive, 0, SEEK_END);
 
-    //grava os membros e a quantidade de membros no archive
+    //writes members and size in archiver
     fwrite(*header, sizeof(member), size, archive);
     fwrite(&size, sizeof(int), 1, archive);
 
-    //printf("Diretorio salvo, %d membros\n", size);
+    //printf("Directory saved, %d members\n", size);
 }
 
 void insert_normal(char *arc_name, char *path)
@@ -77,32 +77,32 @@ void insert_normal(char *arc_name, char *path)
         archive = fopen(arc_name, "wb+");
         if (!archive)
         {
-            fprintf(stderr, "Erro ao criar arquivo em insert_normal");
+            fprintf(stderr, "Failed to create archiver in insert_normal");
             return;
         }
         int zero = 0;
         fwrite(&zero, sizeof(int), 1, archive);
     }
 
-    //carrega diretorio
+    //loads directory
     member *header = NULL;
     int size = 0;
     load_directory(archive, &header, &size);
 
-    //abre o arquivo de entrada
+    //opens entry file
     FILE *in = fopen(path, "rb");
     if (!in)
     {
-        fprintf(stderr, "Erro ao abrir arquivo %s\n em insert_normal", path);
+        fprintf(stderr, "Failed to open %s\n file in insert_normal", path);
         fclose(archive);
         return;
     }
 
-    //obtem informacoes do arquivo original
+    //gets file metadata
     struct stat st;
     stat(path, &st);
 
-    //preenche a struct membro
+    //fills struct member
     member entry;
     strncpy(entry.name, path, MAX_NAME);
     entry.uid = (unsigned int)getuid();
@@ -112,42 +112,33 @@ void insert_normal(char *arc_name, char *path)
     entry.is_compressed = 0;
     fseek(archive, 0, SEEK_END);
     entry.offset = ftell(archive);
-    //fprintf(stderr, "offset inicial: %ld\n", entry.offset);
 
-    /*
-    printf("Name: %s\n", entry.name);
-    printf("UID: %d\nOriginal size: %d\nDisk size: %d\n", entry.uid, entry.original_size, entry.disk_size);
-    printf("Is compressed: %d\nOffset:%ld\n", entry.is_compressed, entry.offset);
-    */
-
-    //cria um buffer de tamanho padrao da de sistemas Linux e UNIX-like
+    //creates buffer with standard Linux/Unix-like size
     char buffer[4096];
     size_t bytes;
     size_t bytes_written = 0;
-    //printf("%ld\n", sizeof(buffer));
     while ((bytes = fread(buffer, 1, sizeof(buffer), in)) > 0)
     {
         fwrite(buffer, 1, bytes, archive);
-        //printf("%c %c %c\n", buffer[0], buffer[1], buffer[2]);
         bytes_written += bytes;
     }
 
     fclose(in);
-    printf("Arquivo inserido sem compressao\n");
+    printf("File inserted uncompressed\n");
     entry.disk_size = bytes_written;
 
-    //atualiza diretorio
+    //updates directory
     header = realloc(header, (size + 1)*sizeof(member));
     if (!header)
     {
-        fprintf(stderr, "erro ao realocar memoria em insert_normal\n");
+        fprintf(stderr, "Failed to reallocate memory in insert_normal\n");
         fclose(archive);
         return;
     }
     header[size] = entry;
     size++;
 
-    //atualiza diretorio no archive
+    //updates directory in archiver
     save_directory(archive, &header, size);
 
     free(header);
@@ -162,37 +153,37 @@ void insert_compressed(char *arc_name, char *path)
         archive = fopen(arc_name, "wb+");
         if (!archive)
         {
-            fprintf(stderr, "Erro ao criar arquivo em insert_normal");
+            fprintf(stderr, "Failed to create archiver in insert_compressed");
             return;
         }
         int zero = 0;
         fwrite(&zero, sizeof(int), 1, archive);
     }
 
-    //carrega diretorio
+    //loads directory
     member *header = NULL;
     int size = 0;
     load_directory(archive, &header, &size);
 
-    //abre o arquivo de entrada
+    //opens entry file
     FILE *in = fopen(path, "rb");
     if (!in)
     {
-        fprintf(stderr, "Erro ao abrir arquivo %s\n em insert_normal", path);
+        fprintf(stderr, "Failed to open %s\n file insert_normal", path);
         fclose(archive);
         return;
     }
 
-    //obtem tamanho original do arquivo
+    //gets file original size
     fseek(in, 0, SEEK_END);
     long original_size = ftell(in);
     fseek(in, 0, SEEK_SET);
 
-    //le o conteudo do arquivo
+    //reads what is in the file
     unsigned char *data = malloc(original_size);
     if (!data)
     {
-        fprintf(stderr, "Erro ao alocar memoria em insert_compressed\n");
+        fprintf(stderr, "Failed to allocate memory in insert_compressed\n");
         fclose(in);
         fclose(archive);
         return;
@@ -200,16 +191,17 @@ void insert_compressed(char *arc_name, char *path)
     fread(data, 1, original_size, in);
     fclose(in);
 
-    //aloca espaco para o conteudo comprimido
+    //creates space for compressed data
     unsigned char *c_data = malloc(original_size);
     if (!c_data)
     {
-        fprintf(stderr, "Erro ao alocar memoria em insert_compressed\n");
+        fprintf(stderr, "Failed to allocate memory for compressed data in insert_compressed\n");
         free(data);
         fclose(archive);
         return;
     }
 
+    //compresses data. if compressed size is bigger than original, inserts uncompressed
     int compressed_size = LZ_Compress(data, c_data, original_size);
     if (compressed_size >= original_size)
     {
@@ -222,11 +214,11 @@ void insert_compressed(char *arc_name, char *path)
 
     free(data);
 
-    //obtem informacoes do arquivo original
+    //gets original file metadata
     struct stat st;
     stat(path, &st);
 
-    //preenche a struct membro
+    //fills struct member
     member entry;
     strncpy(entry.name, path, MAX_NAME);
     entry.uid = (unsigned int)getuid();
@@ -237,21 +229,15 @@ void insert_compressed(char *arc_name, char *path)
     fseek(archive, 0, SEEK_END);
     entry.offset = ftell(archive);
 
-    /*
-    printf("Name: %s\n", entry.name);
-    printf("UID: %d\nOriginal size: %d\nDisk size: %d\n", entry.uid, entry.original_size, entry.disk_size);
-    printf("Is compressed: %d\nOffset:%ld\n", entry.is_compressed, entry.offset);
-    */
-
-    //grava os dados no arquivo
+    //writes data in archiver
     fwrite(c_data, 1, compressed_size, archive);
     free(c_data);
 
-    //atualiza diretorio
+    //updates directory
     header = realloc(header, (size + 1)*sizeof(member));
     if (!header)
     {
-        fprintf(stderr, "Erro ao realocar memoria em insert_compressed\n");
+        fprintf(stderr, "Error reallocating memory in insert_compressed\n");
         fclose(archive);
         return;
     }
@@ -262,7 +248,7 @@ void insert_compressed(char *arc_name, char *path)
     free(header);
     fclose(archive);
 
-    printf("Arquivo inserido comprimido.\n");
+    printf("File inserted compressed.\n");
 }
 
 void extract_member(char *arc_name, char *name)
@@ -270,7 +256,7 @@ void extract_member(char *arc_name, char *name)
     FILE *archive = fopen(arc_name, "rb");
     if (!archive)
     {
-        fprintf(stderr, "Erro ao abrir arquivo em extract_member\n");
+        fprintf(stderr, "Failed to open archiver in extract_member\n");
         return;
     }
 
@@ -281,7 +267,7 @@ void extract_member(char *arc_name, char *name)
 
     if (size == 0 || header == NULL)
     {
-        printf("Arquivo vazio\n");
+        printf("Archiver empty\n");
         fclose(archive);
         return;
     }
@@ -289,36 +275,32 @@ void extract_member(char *arc_name, char *name)
     int index = find_member(header, size, name);
     if (index == -1)
     {
-        printf("Membro nao esta no archive\n");
+        printf("Member not in archiver\n");
         free(header);
         fclose(archive);
         return;
     }
 
     member extracted = header[index];
-    /*
-    printf("Extraindo: %s\n", extracted.name);
-    printf("Offset: %ld, disk size: %u, original size: %u\n", extracted.offset, extracted.disk_size, extracted.original_size);
-    */
 
     unsigned char *c_data = malloc(extracted.disk_size);
     if (!c_data)
     {
-        fprintf(stderr, "Erro ao alocar memoria em extract_member\n");
+        fprintf(stderr, "Error allocating disk_size memory in extract_member\n");
         free(header);
         fclose(archive);
         return;
     }
 
-    //le o membro extraido
+    //reads extracted member
     fseek(archive, extracted.offset, SEEK_SET);
     fread(c_data, 1, extracted.disk_size, archive);
 
-    //cria arquivo de saido com o nome do arquivo selecionado
+    //creates output file with extracted file name
     FILE *out = fopen(extracted.name, "wb");
     if (!out)
     {
-        fprintf(stderr, "Erro ao criar arquivo de saida\n");
+        fprintf(stderr, "Error creating output file\n");
         free(c_data);
         free(header);
         fclose(archive);
@@ -326,13 +308,13 @@ void extract_member(char *arc_name, char *name)
         return;
     }
 
-    //descomprime se estiver comprimido
+    //uncompresses file if compressed
     if (extracted.is_compressed)
     {
         unsigned char *dc_data = malloc(extracted.original_size);
         if (!dc_data)
         {
-            fprintf(stderr, "Erro ao alocar memoria em extract_member\n");
+            fprintf(stderr, "Error allocating original_size memory extract_member\n");
             free(c_data);
             free(header);
             fclose(archive);
@@ -342,15 +324,15 @@ void extract_member(char *arc_name, char *name)
 
         LZ_Uncompress(c_data, dc_data, extracted.disk_size);
 
-        //escreve no arquivo de saída
+        //writes data in output file
         fwrite(dc_data, 1, extracted.original_size, out);
         free(dc_data);
     }
-    //escreve o arquivo direto se nao estiver comprimido
+    //writes data in outputfile without uncompressing
     else
         fwrite(c_data, 1, extracted.disk_size, out);
 
-    printf("Arquivo %s extraido com sucesso\n", extracted.name);
+    printf("File %s extracted successfully\n", extracted.name);
 
     fclose(out);
     free(c_data);
@@ -363,18 +345,18 @@ void extract_all(char *arc_name)
     FILE *archive = fopen(arc_name, "rb");
     if (!archive)
     {
-        fprintf(stderr, "Erro ao abrir arquivo em extract_member\n");
+        fprintf(stderr, "Failed to open archiver in extract_member\n");
         return;
     }
 
-    //carrega diretorio
+    //loads directory
     member *header = NULL;
     int size = 0;
     load_directory(archive, &header, &size);
 
     if (size == 0 || header == NULL)
     {
-        printf("Arquivo vazio\n");
+        printf("Archiver empty\n");
         fclose(archive);
         return;
     }
@@ -382,7 +364,7 @@ void extract_all(char *arc_name)
     for (int i = 0; i < size; i++)
         extract_member(arc_name, header[i].name);
 
-    printf("Todos os membros foram extraidos com sucesso\n");
+    printf("All files extracted successfully\n");
 }
 
 void list_archive(char *arc_name)
@@ -390,34 +372,34 @@ void list_archive(char *arc_name)
     FILE *archive = fopen(arc_name, "rb");
     if (!archive)
     {
-        fprintf(stderr, "Erro ao abrir arquivo em list_archive\n");
+        fprintf(stderr, "Failed to open archiver in list_archive\n");
         return;
     }
 
-    //carrega diretorio
+    //loads directory
     member *header = NULL;
     int size = 0;
     load_directory(archive, &header, &size);
     
     if (size == 0 || header == NULL)
     {
-        printf("Arquivo vazio\n");
+        printf("Archiver empty\n");
         return;
     }
 
     for (int i = 0; i < size; i++)
     {
-        printf("Nome: %s\n", header[i].name);
+        printf("Name: %s\n", header[i].name);
         printf("UID: %u\n", header[i].uid);
-        printf("Tamanho original: %u bytes\n", header[i].original_size);
-        printf("Tamanho em disco: %u bytes\n", header[i].disk_size);
-        printf("Tamanho offset: %ld\n", header[i].offset);
-        printf("Comprimido: ");
+        printf("Original size: %u bytes\n", header[i].original_size);
+        printf("Disk size: %u bytes\n", header[i].disk_size);
+        printf("Offset size: %ld\n", header[i].offset);
+        printf("Compressed: ");
         if (header[i].is_compressed)
-            printf("sim\n");
+            printf("yes\n");
         else
-            printf("nao\n");
-        printf("Ultima modificacao: tempo\n");
+            printf("no\n");
+        printf("Last modification: tempo\n");
         printf("==================\n");
     }
 
@@ -442,42 +424,37 @@ void remove_member(char *arc_name, char *name)
     if (!archive)
     {
         
-        fprintf(stderr, "Erro ao abrir arquivo em remove_member\n");
+        fprintf(stderr, "Failed to open archiver in remove_member\n");
         return;
     }
 
-    //carrega diretorio
+    //loads directory
     member *header = NULL;
     int size = 0;
     load_directory(archive, &header, &size);
 
     if (size == 0 || header == NULL)
     {
-        printf("Arquivo vazio\n");
+        printf("Archiver empty\n");
         fclose(archive);
         return;
     }
 
-    //se o tamanho do diretorio for 1, apaga o arquivo
+    //if directory size is 1, deletes archiver
     if (size == 1)
     {
         free(header);
         fclose(archive);
         remove(arc_name);
-        printf("Ultimo membro removido\n");
+        printf("Last member removed successfully\n");
         return;
     }
 
-    //busca o membro a ser removido
+    //searches for member to be removed
     int index = find_member(header, size, name);
-    if (index != -1)
-        printf("Indice: %d\n", index);
-    else
-        printf("Indice nao encontrado\n");
-
     if (index == -1)
     {
-        printf("Membro nao encontrado no diretorio\n");
+        printf("Member not in directory\n");
         free(header);
         fclose(archive);
         return;
@@ -490,13 +467,12 @@ void remove_member(char *arc_name, char *name)
     member *new_header = realloc(header, size*sizeof(member));
     if (new_header)
         header = new_header;
-
-    //fseek(archive, 0, SEEK_END);
+    
     save_directory(archive, &header, size);
 
     free(header);
     fclose(archive);
-    printf("Membro removido\n");
+    printf("Membro %s removed successfully\n", name);
 }
 
 void move_member(char *arc_name, char *name, char *target)
@@ -504,29 +480,29 @@ void move_member(char *arc_name, char *name, char *target)
     FILE *archive = fopen(arc_name, "rb+");
     if (!archive)
     {
-        fprintf(stderr, "Erro ao abrir arquivo em move_member\n");
+        fprintf(stderr, "Failed to open archiver in move_member\n");
         return;
     }
 
-    //carrega o diretorio
+    //loads directory
     member *header = NULL;
     int size = 0;
     load_directory(archive, &header, &size);
 
     if (size == 0 || header == NULL)
     {
-        printf("Arquivo vazio\n");
+        printf("Archiver empty\n");
         fclose(archive);
         return;
     }
 
-    //procura indice dos membros
+    //searches for member indexes
     int idx_name = find_member(header, size, name);
     int idx_target = find_member(header, size, target);
 
     if (idx_name == -1)
     {
-        printf("Membro '%s' não encontrado\n", name);
+        printf("Member '%s' not in directory\n", name);
         free(header);
         fclose(archive);
         return;
@@ -534,7 +510,7 @@ void move_member(char *arc_name, char *name, char *target)
 
     if (idx_target == -1)
     {
-        printf("Membro target '%s' não encontrado\n", target);
+        printf("Target member '%s' não encontrado\n", target);
         free(header);
         fclose(archive);
         return;
@@ -542,13 +518,13 @@ void move_member(char *arc_name, char *name, char *target)
 
     if (idx_name == idx_target)
     {
-        printf("Membro e target são o mesmo, nenhuma mudança\n");
+        printf("Member and target member are the same\n");
         free(header);
         fclose(archive);
         return;
     }
 
-    //extrai o membro a ser movido
+    //extracts member that is being moved
     member moving = header[idx_name];
 
     if (idx_name < idx_target)
