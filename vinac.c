@@ -399,7 +399,11 @@ void list_archive(char *arc_name)
             printf("yes\n");
         else
             printf("no\n");
-        printf("Last modification: tempo\n");
+        //converts stored time to year-month-day hours:minutes:seconds
+        char timebuf[64];
+        struct tm *time = localtime(&header[i].mod_time);
+        strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", time);
+        printf("Last modification: %s\n", timebuf);
         printf("==================\n");
     }
 
@@ -529,26 +533,26 @@ void move_member(char *arc_name, char *name, char *target)
 
     if (idx_name < idx_target)
     {
-        //move todos os elementos entre idx_name+1 e idx_target uma posição para trás
+        //moves all elements between idx_name + 1 and idx_target + 1 back 1 position
         for (int i = idx_name; i < idx_target; i++)
             header[i] = header[i + 1];
 
-        //insere o membro na nova posição
+        //inserts member in new position
         header[idx_target] = moving;
     }
     else
     {
-        //move todos os elementos entre idx_target+1 e idx_name-1 uma posição para frente
+        //moves all elements between idx_target + 1 and idx_name - 1 forward 1 position
         for (int i = idx_name; i > idx_target + 1; i--)
             header[i] = header[i - 1];
 
-        //insere o membro logo depois do target
+        //inserts member right after target
         header[idx_target + 1] = moving;
     }
 
-    printf("Membro '%s' movido para depois de '%s'\n", name, target);
+    printf("Member '%s' is now after member '%s'\n", name, target);
 
-    //atualiza o diretório no archive
+    //updates directory and archiver
     fseek(archive, 0, SEEK_END);
     save_directory(archive, &header, size);
 
