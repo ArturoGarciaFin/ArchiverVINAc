@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 3)
     {
-        fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+        fprintf(stderr, "Incorrect use of entry parameters\n");
         return 1;
     }
 
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     {
         if (argc < 4)
         {
-            fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+            fprintf(stderr, "Incorrect use of entry parameters\n");
             return 1;
         }
         
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     {
         if (argc < 4)
         {
-            fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+            fprintf(stderr, "Incorrect use of entry parameters\n");
             return 1;
         }
         
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     {
         if (argc != 5)
         {
-            fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+            fprintf(stderr, "Incorrect use of entry parameters\n");
             return 1;
         }
 
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     {
         if (argc < 3)
         {
-            fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+            fprintf(stderr, "Incorrect use of entry parameters\n");
         }
         
         if (argc == 3)
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     {
         if (argc < 4)
         {
-            fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+            fprintf(stderr, "Incorrect use of entry parameters\n");
             return 1;
         }
         
@@ -93,12 +93,12 @@ int main(int argc, char *argv[])
     {
         if (argc != 3)
         {
-            fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+            fprintf(stderr, "Incorrect use of entry parameters\n");
         }
         list_archive(archive);
         return 0;
     }
 
-    fprintf(stderr, "Uso incorreto dos parametros de entrada\n");
+    fprintf(stderr, "Incorrect use of entry parameters\n");
     return 1;
 }
