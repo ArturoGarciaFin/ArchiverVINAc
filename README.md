@@ -19,6 +19,7 @@ To compile the project, ensure you have a C compiler (like `gcc`) installed. You
 
 ```bash
 make
+```
 
 ## 🚀 Usage
 
