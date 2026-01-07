@@ -83,5 +83,5 @@ Changes the order of files inside the binary archive. This moves the first file 
 
 ## 📝 Credits
 
-* **Author:** [Seu Nome Aqui]
+* **Author:** Arturo Garcia Fin
 * **Compression Logic:** Utilizes an external LZ compression implementation provided for the course.
