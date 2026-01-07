@@ -9,9 +9,10 @@ How to use:
 
 
 *To insert files:
-./vinac -ip/ic "name".vc "file1" "file2" ...
+./vinac -ip OR ic "name".vc "file1" "file2" ...
 
 Ip: inserts plain, uncompressed.
+
 Ic: inserts compressed. If original file is bigger than compressed file, inserts plain.
 If the file you are trying to insert has the same name as another file in the archiver, the old file will be removed and the new one added.
 
